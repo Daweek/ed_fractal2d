@@ -113,6 +113,7 @@ void generatePoints_cpu_kernel(double *pts, int npts, int kid, const IFSMap *map
 	double px = 0.0;
 	double py = 0.0;
 
+	#pragma omp parallel for
 	for (int pi = 1; pi < npts; ++pi) {  // Start from 1 beacuse 0 needs to be 0.0
 		//select map
 		const IFSMap *map = &maps[0];
@@ -231,10 +232,14 @@ void renderPoints_cpu_kernel(const double *pts, int npts, int kid, int ninstance
 	// std::minstd_rand randomer(seed_gen());
 	std::mt19937 randomer(seed_gen());
 	randomer.seed(patchgen_seed);
+
 	auto genpp=[&](){return (unsigned int)(randomer()*(double)(512-1)/(double)((uint64_t)randomer.max()+1)+1);}; //[1, 512]
 	auto random=[&](){return randomer()/(double)randomer.max();}; //[0.0, 1.0]
 
 	auto pimg = [&](unsigned char *imgs_, int ii, int r, int c) {return &imgs_[((ii * height + r) * width + c) * 3]; };
+	
+	unsigned int pap_g = genpp();
+	
 	//3x3 random dots plain gray
 	auto drawPatch_P3RDPG = [&](unsigned char *img, int r, int c) {
 		//generate patch pattern
@@ -365,6 +370,28 @@ void renderPoints_cpu_kernel(const double *pts, int npts, int kid, int ninstance
 			}
 		}
 	};
+	//3x3 random dots plain gray
+	auto drawPatch_P3FDPG = [&](unsigned char *img, int r, int c) {
+		//generate patch pattern
+		// unsigned int pap = genpp();
+		unsigned int pah = 1;
+		//uint8*3*9 rgbrgbrgb ※はみ出し…？
+		//_m512i mimg=
+		//draw patch
+		for (int kr = 0; kr < 3; ++kr) {
+			for (int kc = 0; kc < 3; ++kc) {
+				int nr = r + kr - 3 / 2;
+				int nc = c + kc - 3 / 2;
+				//check boundary
+				if (nr >= 0 && nr < height && nc >= 0 && nc < width) {
+					unsigned char *pp = pimg(img, 0, nr, nc);
+					const unsigned char cl = (pap_g&pah) ? 127 : 0;
+					pp[0] = cl; pp[1] = cl; pp[2] = cl; //pp[3] = 255;
+				}
+				pah <<= 1;
+			}
+		}
+	};
 
 
 	//obtain aabb
@@ -465,9 +492,11 @@ void renderPoints_cpu_kernel(const double *pts, int npts, int kid, int ninstance
 			case 4:
 				drawPatch_P3RDRG(pimg(imgs, kid, 0, 0), pr, pc);
 				break;
-			
 			case 5:
 				drawPatch_P1ADPG(pimg(imgs, kid, 0, 0), pr, pc);
+				break;
+			case 6:
+				drawPatch_P3FDPG(pimg(imgs, kid, 0, 0), pr, pc);
 				break;
 			}
 		}

@@ -61,9 +61,9 @@ setup(name='PyFractal2DRenderer',
           '/home/aac12092hz/reannotation/training/env1/lib64/python3.8/site-packages/torch/lib'
           ]+library_dirs_libs,
         #extra_compile_args=['-Wall -O0 -g -DDEBUG'],
-        #extra_compile_args=['-fopenmp'],
+        # extra_compile_args=['-fopenmp'],
         extra_compile_args=[
-          '-ffast-math'
+          '-ffast-math','-fopenmp',
           ]+extra_compiler_args_libs,
       )],
     cmdclass={'build_ext': cpp_extension.BuildExtension}

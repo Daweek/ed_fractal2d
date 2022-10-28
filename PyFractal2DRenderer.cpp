@@ -18,9 +18,9 @@ ndarray<double> generate(int npts, const std::vector<std::vector<std::vector<dou
 	ndarray<double> pts({nmapss,npts,2});
 	double *pts_ = (double*)pts.data();
 	std::vector<std::vector<IFSMap>> mapss_(nmapss);
-#ifdef _OPENMP
+// #ifdef _OPENMP
 #pragma omp parallel for
-#endif
+// #endif
 	for (int i = 0; i < nmapss; ++i) {
 		mapss_[i].resize(mapss[i].size());
 		for (int j = 0; j < mapss_[i].size(); ++j) {
