@@ -103,6 +103,9 @@ void generatePoints_cpu_kernel(double *pts, int npts, int kid, const IFSMap *map
 	std::cout << std::fixed << std::setprecision(17);
 	std::mt19937 e2(pointgen_seed);
 
+	// float limit = std::numeric_limits<float>().max()/2.0;
+	float limit = 1.69999e+4;  
+	// float limit = 1.69999e+38;
 	// int print_once_x = 0;
 	// int print_once_y = 0;	
 
@@ -113,7 +116,7 @@ void generatePoints_cpu_kernel(double *pts, int npts, int kid, const IFSMap *map
 	double px = 0.0;
 	double py = 0.0;
 
-	#pragma omp parallel for
+	// #pragma omp parallel for
 	for (int pi = 1; pi < npts; ++pi) {  // Start from 1 beacuse 0 needs to be 0.0
 		//select map
 		const IFSMap *map = &maps[0];
@@ -132,55 +135,74 @@ void generatePoints_cpu_kernel(double *pts, int npts, int kid, const IFSMap *map
 				map = &maps[i]; break;
 			}
 		}
-
 		// std::cout <<"prob: "<< prob << std::endl;		
 		// std::cout <<"a:"<< std::fixed << std::setprecision(16) << map->a << std::endl;	
 		// std::cout <<"e:"<< std::fixed << std::setprecision(16) << map->e << std::endl;		
 		//translate
-		double &nx = pts[0 + (kid*npts + pi) * 2];
-		double &ny = pts[1 + (kid*npts + pi) * 2];
+		double &newnx = pts[0 + (kid*npts + pi) * 2];
+		double &newny = pts[1 + (kid*npts + pi) * 2];
 		
-		
-		nx = map->a * px + map->b * py + map->e;
-		ny = map->c * px + map->d * py + map->f;
+		float nx = map->a * px + map->b * py + map->e;
+		float ny = map->c * px + map->d * py + map->f;
+		// nx = map->a * px + map->b * py + map->e;
+		// ny = map->c * px + map->d * py + map->f;
 
-		if (nx > -std::numeric_limits<float>().max()/2 && nx < std::numeric_limits<float>().max()/2 && std::isnormal(nx)){
+		if ((nx > -limit) && (nx < limit) && std::isnormal(nx)){
+			// if (nfrac == 203 )std::cout<<"x: "<<nx<<std::endl;
 			px = nx;
-			
 		}
 		else{
-			// std::cout<<"limit positive: "<<std::numeric_limits<float>().max()<<std::endl;
-			// std::cout<<"limit negative: "<<-std::numeric_limits<float>().max()<<std::endl;
+			// std::cout<<"limit positive: "<<limit <<std::endl;
+			// std::cout<<"limit negative: "<<-limit <<std::endl;
+			
+			// if (std::isnormal(nx)){
+			// 	std::cout<<"Number on X is NORMAL: "<<nx<<std::endl;
+			// }
+			// else{
+			// 	std::cout<<"Number on X is NOT =---------------= NORMAL: "<<nx<<std::endl;
+			// }
+
 			// if (print_once_x == 0){
 			// std::cout<<"original vector: "<<px<<std::endl;
 			// std::cout<<"Beyond double: "<<nx<<std::endl;
-			// std::cout<<"index: "<<pi<<std::endl;
+			// std::cout<<"index X: "<<pi<<std::endl;
+			// break;
 			// print_once_x = 1;
 			// }
 			nx = 0.0;
 			px = nx;
-			// exit(0);
 		}
 
-		if (ny > -std::numeric_limits<float>().max()/2 && ny < std::numeric_limits<float>().max()/2 && std::isnormal(ny)){
+		if ((ny > -limit) && (ny < limit) && std::isnormal(ny)){
+			// if (nfrac == 203 )std::cout<<"y: "<<ny<<std::endl;
 			py = ny;
 			
 		}
 		else{
-			// std::cout<<"limit positive: "<<std::numeric_limits<float>().max()<<std::endl;
-			// std::cout<<"limit negative: "<<-std::numeric_limits<float>().max()<<std::endl;
+			// std::cout<<"limit positive: "<<limit<<std::endl;
+			// std::cout<<"limit negative: "<<-limit<<std::endl;
+
+			// if (std::isnormal(ny)){
+			// 	std::cout<<"Number on Y is NORMAL: "<<ny<<std::endl;
+			// }
+			// else{
+			// 	std::cout<<"Number on Y is NOT =---------------= NORMAL: "<<ny<<std::endl;
+			// }
+
+
 			// if (print_once_y == 0){
 			// std::cout<<"original vector: "<<py<<std::endl;
 			// std::cout<<"Beyond double: "<<ny<<std::endl;
-			// std::cout<<"index: "<<pi<<std::endl;
+			// std::cout<<"index Y: "<<pi<<std::endl;
+			// break;
 			// print_once_y = 1;
 			// }
-			
 			ny = 0.0;
 			py = ny;
-			// exit(0);
 		}
 
+		newnx = nx;
+		newny = ny;
 		// if (std::isnormal(nx) && (nx > (-1)*std::numeric_limits<double>().max()/1000000000000000000 && nx < std::numeric_limits<double>().max()/1000000000000000000)){
 		// 	px = nx;
 		// }
@@ -192,8 +214,6 @@ void generatePoints_cpu_kernel(double *pts, int npts, int kid, const IFSMap *map
 		// }
 		// else
 		// 	nx = 0.0;		
-
-
 		// px = nx;
 		// py = ny;
 		// if (nfrac == 2 && pi < 5 )  {
@@ -210,10 +230,12 @@ void generatePoints_cpu_kernel(double *pts, int npts, int kid, const IFSMap *map
 
 void generatePoints_cpu(double *pts, int npts, const std::vector<std::vector<IFSMap>> &mapss, uint64_t pointgen_seed, int nfrac) {
 	const int ninstances = mapss.size();
+	// std::cout<<"ninstances: "<<ninstances<<std::endl;
 #ifdef _OPENMP 
 #pragma omp parallel for
 #endif
 	for (int ii = 0; ii < ninstances; ++ii) {
+		// std::cout<<"ii: "<<ii<<std::endl;
 		generatePoints_cpu_kernel(pts, npts, ii, mapss[ii].data(), mapss[ii].size(), pointgen_seed, nfrac);
 	}
 }
@@ -402,11 +424,11 @@ void renderPoints_cpu_kernel(const double *pts, int npts, int kid, int ninstance
 		if (pi == 0) { pxmin = pxmax = 0.0; pymin = pymax = 0.0; }
 		else {
 			//inf対策
-			if((px==0 || std::isnormal(px) && (px >= (-1)*std::numeric_limits<float>().max()/2 && px < std::numeric_limits<float>().max()/2))){
+			if((px==0 || std::isnormal(px) && (px >= (-1)*std::numeric_limits<float>().max()/2) && (px < std::numeric_limits<float>().max()/2))){
 				if (px < pxmin) pxmin = px;
 				if (px > pxmax) pxmax = px;
 			}
-			if((py==0 || std::isnormal(py) && (py >= (-1)*std::numeric_limits<float>().max()/2 && py < std::numeric_limits<float>().max()/2))){
+			if((py==0 || std::isnormal(py) && (py >= (-1)*std::numeric_limits<float>().max()/2) && (py < std::numeric_limits<float>().max()/2))){
 
 				if (py < pymin) pymin = py;
 				if (py > pymax) pymax = py;
